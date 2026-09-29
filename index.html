@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>團隊超能力評估</title>
+  <!-- 引入 FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- 引入 Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入 Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 引入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 引入 SheetJS 用於匯出 Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    body { 
+      background-color: #f0fdf4; 
+      font-family: 'Inter', 'Microsoft JhengHei', sans-serif; 
+    }
+    .score-radio { display: none; }
+    .score-label { 
+      cursor: pointer; 
+      transition: all 0.2s ease-in-out; 
+    }
+    .score-radio:checked + .score-label { 
+      background-color: #16a34a; 
+      color: white; 
+      border-color: #16a34a; 
+      font-weight: bold; 
+      transform: scale(1.08); 
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); 
+    }
+    .loader { 
+      border-top-color: #16a34a; 
+      animation: spinner 1s linear infinite; 
+    }
+    @keyframes spinner { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
+    /* Modal 動畫 */
+    .modal-enter-active, .modal-leave-active { transition: opacity 0.25s ease; }
+    .modal-enter-from, .modal-leave-to { opacity: 0; }
+  </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen">
+
+  <div id="app" class="max-w-7xl mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+    
+    <!-- 左側：表單區 -->
+    <div class="w-full lg:w-3/5 bg-white p-6 md:p-8 rounded-2xl shadow-xl border border-green-100 flex flex-col gap-6">
+      
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-green-100 pb-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-green-700 flex items-center gap-2">
+            🚀 團隊超能力評估雷達
+          </h1>
+          <p class="text-xs md:text-sm text-gray-500 mt-1">客觀衡量團隊合作軟實力與自我成長數據</p>
+        </div>
+        <button @click="fillDemoData" type="button" class="self-start sm:self-auto text-xs bg-green-100 hover:bg-green-200 text-green-800 font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 載入測試範例
+        </button>
+      </div>
+      
+      <!-- 錯誤訊息通知 -->
+      <div v-if="initError" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+        <p class="text-sm text-red-700 font-medium" v-html="initMessage"></p>
+      </div>
+
+      <!-- 評分指引 -->
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-4 md:p-5 rounded-xl border border-green-200/60 shadow-sm">
+        <h3 class="font-bold text-green-800 mb-3 flex items-center gap-2 text-sm md:text-base">
+          <i class="fa-solid fa-lightbulb text-yellow-500"></i> 評分標準參考 (5點量表)
+        </h3>
+        <div class="grid grid-cols-5 gap-1.5 md:gap-2 text-center text-xs">
+          <div class="bg-white/90 p-2 rounded-lg border border-green-200/80 shadow-xs">
+            <b class="text-green-700 text-sm">5分</b><br><span class="text-gray-600">每次做到<br>(主動帶動)</span>
+          </div>
+          <div class="bg-white/90 p-2 rounded-lg border border-green-200/80 shadow-xs">
+            <b class="text-green-700 text-sm">4分</b><br><span class="text-gray-600">經常做到<br>(主動展現)</span>
+          </div>
+          <div class="bg-white/90 p-2 rounded-lg border border-green-200/80 shadow-xs">
+            <b class="text-green-700 text-sm">3分</b><br><span class="text-gray-600">一半時間<br>(有時分心)</span>
+          </div>
+          <div class="bg-white/90 p-2 rounded-lg border border-green-200/80 shadow-xs">
+            <b class="text-green-700 text-sm">2分</b><br><span class="text-gray-600">偶爾做到<br>(需人提醒)</span>
+          </div>
+          <div class="bg-white/90 p-2 rounded-lg border border-green-200/80 shadow-xs">
+            <b class="text-green-700 text-sm">1分</b><br><span class="text-gray-600">很少做到<br>(還在摸索)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 基本資料設定 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-bold mb-1.5 text-green-800 text-sm">小隊名稱 <span class="text-red-500">*</span></label>
+          <input type="text" v-model="teamName" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition" placeholder="例如：無敵第一小隊">
+        </div>
+        <div>
+          <label class="block font-bold mb-1.5 text-green-800 text-sm">小隊人數 (含自己)</label>
+          <select v-model="memberCount" @change="adjustPeers" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition bg-white">
+            <option v-for="n in 5" :key="n" :value="n+1">{{ n+1 }} 人</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 評分區塊 -->
+      <div class="space-y-6">
+        
+        <!-- 自評區 -->
+        <div class="bg-amber-50/70 p-5 rounded-2xl border border-amber-200 shadow-xs">
+          <h2 class="text-lg font-bold text-amber-800 mb-4 flex items-center gap-2">
+            <span class="bg-amber-400 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm">⭐</span>
+            關於我自己 (自評)
+          </h2>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-amber-900 mb-1">您的姓名 <span class="text-red-500">*</span></label>
+            <input type="text" v-model="selfData.name" @input="updateChart" class="w-full border border-amber-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white" placeholder="請輸入您的姓名">
+          </div>
+          
+          <div v-for="(dim, idx) in dimensions" :key="'self-'+idx" class="mb-4 bg-white p-3.5 rounded-xl border border-amber-100 shadow-2xs">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-gray-800 text-sm">{{ dim.title }}</span>
+              <span class="text-xs text-gray-500">{{ dim.desc }}</span>
+            </div>
+            <div class="flex justify-between gap-1.5 md:gap-2">
+              <label v-for="score in 5" :key="score" class="flex-1 text-center">
+                <input type="radio" :name="'self-'+idx" :value="score" v-model="selfData.scores[idx]" @change="updateChart" class="score-radio">
+                <div class="score-label border border-gray-200 rounded-lg py-2 text-xs md:text-sm font-medium bg-gray-50 hover:bg-amber-100">{{ score }}</div>
+              </label>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <label class="block font-bold mb-1.5 text-amber-900 text-xs md:text-sm">✏️ 關鍵事實證據 / 具體回饋 (自由填寫)</label>
+            <textarea v-model="selfData.feedback" class="w-full border border-amber-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none min-h-[80px] bg-white" placeholder="例如：在專題報告中，我主動承擔了資料收集的任務，並提前兩天完成..."></textarea>
+          </div>
+        </div>
+
+        <!-- 互評區 -->
+        <div v-for="(peer, pIdx) in peersData" :key="'peer-'+pIdx" class="bg-blue-50/70 p-5 rounded-2xl border border-blue-200 shadow-xs">
+          <h2 class="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
+            <span class="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm">🤝</span>
+            關於我的隊友 {{ pIdx + 1 }} (互評)
+          </h2>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-blue-900 mb-1">隊友姓名</label>
+            <input type="text" v-model="peer.name" @input="updateChart" class="w-full border border-blue-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" placeholder="請輸入隊友姓名">
+          </div>
+          
+          <div v-for="(dim, idx) in dimensions" :key="'peer-'+pIdx+'-'+idx" class="mb-4 bg-white p-3.5 rounded-xl border border-blue-100 shadow-2xs">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-gray-800 text-sm">{{ dim.title }}</span>
+              <span class="text-xs text-gray-500">{{ dim.desc }}</span>
+            </div>
+            <div class="flex justify-between gap-1.5 md:gap-2">
+              <label v-for="score in 5" :key="score" class="flex-1 text-center">
+                <input type="radio" :name="'peer-'+pIdx+'-'+idx" :value="score" v-model="peer.scores[idx]" @change="updateChart" class="score-radio">
+                <div class="score-label border border-gray-200 rounded-lg py-2 text-xs md:text-sm font-medium bg-gray-50 hover:bg-blue-100">{{ score }}</div>
+              </label>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <label class="block font-bold mb-1.5 text-blue-900 text-xs md:text-sm">✏️ 關鍵事實證據 / 具體回饋 (自由填寫)</label>
+            <textarea v-model="peer.feedback" class="w-full border border-blue-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px] bg-white" placeholder="例如：他/她在討論時總能專心聽大家說話，並且提出很有建設性的意見..."></textarea>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右側：雷達圖與按鈕區 (Sticky) -->
+    <div class="w-full lg:w-2/5">
+      <div class="sticky top-8 space-y-6">
+        
+        <!-- 雷達圖容器 -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-green-100 flex flex-col items-center">
+          <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-green-600"></i>
+            {{ teamName || '小隊' }} - 團隊超能力雷達
+          </h2>
+          <div class="w-full max-w-sm aspect-square relative">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 操作按鈕區 -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-green-100 space-y-3">
+          <button @click="downloadPNG" class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md flex justify-center items-center gap-2 text-sm">
+            <i class="fa-solid fa-file-image"></i> 下載 PNG 收據 (圖檔)
+          </button>
+          
+          <button @click="downloadExcel" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md flex justify-center items-center gap-2 text-sm">
+            <i class="fa-solid fa-file-excel"></i> 下載 EXCEL (表單資料)
+          </button>
+          
+          <hr class="my-4 border-gray-100">
+          
+          <button @click="syncData" :disabled="isSyncing" :class="isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 active:bg-red-800'" class="w-full text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md hover:shadow-lg flex justify-center items-center gap-2 text-base">
+            <div v-if="isSyncing" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-5 w-5"></div>
+            <i v-else class="fa-solid fa-cloud-arrow-up"></i>
+            {{ isSyncing ? '同步中，請稍候...' : '同步至表單與雲端硬碟' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 自訂彈窗 Modal (代替原生 alert) -->
+    <Transition name="modal">
+      <div v-if="modal.show" class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all border border-gray-100">
+          <div class="flex items-center gap-3 mb-3">
+            <div :class="{
+              'bg-blue-100 text-blue-600': modal.type === 'info',
+              'bg-amber-100 text-amber-600': modal.type === 'warning',
+              'bg-green-100 text-green-600': modal.type === 'success',
+              'bg-red-100 text-red-600': modal.type === 'error'
+            }" class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0">
+              <i :class="{
+                'fa-solid fa-circle-info': modal.type === 'info',
+                'fa-solid fa-triangle-exclamation': modal.type === 'warning',
+                'fa-solid fa-circle-check': modal.type === 'success',
+                'fa-solid fa-circle-xmark': modal.type === 'error'
+              }"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">{{ modal.title }}</h3>
+          </div>
+          <p class="text-gray-600 text-sm mb-6 leading-relaxed whitespace-pre-line">{{ modal.message }}</p>
+          <div class="flex justify-end">
+            <button @click="modal.show = false" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold transition">
+              我知道了
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted, reactive } = Vue;
+
+    createApp({
+      setup() {
+        const initMessage = ref('');
+        const initError = ref(false);
+        const isSyncing = ref(false);
+        
+        const teamName = ref('');
+        const memberCount = ref(2); // 預設2人 (1自評+1互評)
+        
+        // 彈窗 Modal 狀態
+        const modal = reactive({
+          show: false,
+          title: '提示',
+          message: '',
+          type: 'info'
+        });
+
+        const showNotice = (message, title = '提示', type = 'info') => {
+          modal.title = title;
+          modal.message = message;
+          modal.type = type;
+          modal.show = true;
+        };
+        
+        const dimensions = [
+          { title: '認真負責', desc: '做好分內事、檢查品質' },
+          { title: '積極互助', desc: '主動幫忙、遇到困難一起想辦法' },
+          { title: '傾聽尊重', desc: '專心聽、不搶話、試著理解' },
+          { title: '清楚溝通', desc: '說出想法與感受、口氣有禮貌' },
+          { title: '團體反思', desc: '提醒進度、找出讓團隊更好的方法' }
+        ];
+
+        // 資料結構
+        const selfData = reactive({ name: '', scores: [3, 3, 3, 3, 3], feedback: '' });
+        const peersData = ref([{ name: '', scores: [3, 3, 3, 3, 3], feedback: '' }]);
+
+        let chartInstance = null;
+        
+        // 顏色調色盤 (區分自己與他人)
+        const colors = [
+          { bg: 'rgba(234, 179, 8, 0.35)', border: 'rgba(234, 179, 8, 1)' },   // 自己: 黃色
+          { bg: 'rgba(59, 130, 246, 0.25)', border: 'rgba(59, 130, 246, 1)' }, // 隊友1: 藍色
+          { bg: 'rgba(239, 68, 68, 0.25)', border: 'rgba(239, 68, 68, 1)' },   // 隊友2: 紅色
+          { bg: 'rgba(16, 185, 129, 0.25)', border: 'rgba(16, 185, 129, 1)' }, // 隊友3: 綠色
+          { bg: 'rgba(168, 85, 247, 0.25)', border: 'rgba(168, 85, 247, 1)' }, // 隊友4: 紫色
+          { bg: 'rgba(236, 72, 153, 0.25)', border: 'rgba(236, 72, 153, 1)' }, // 隊友5: 粉紅
+        ];
+
+        onMounted(() => {
+          // 偵測是否在 GAS 環境下運行
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run.withSuccessHandler(res => {
+              if (res && res.error) {
+                initMessage.value = res.error;
+                initError.value = true;
+              } else {
+                initError.value = false;
+              }
+            }).getInitialData();
+          } else {
+            initError.value = false;
+          }
+          initChart();
+        });
+
+        // 調整隊友數量
+        const adjustPeers = () => {
+          const targetPeers = parseInt(memberCount.value) - 1;
+          const currentPeers = peersData.value.length;
+          
+          if (targetPeers > currentPeers) {
+            for (let i = currentPeers; i < targetPeers; i++) {
+              peersData.value.push({ name: '', scores: [3, 3, 3, 3, 3], feedback: '' });
+            }
+          } else if (targetPeers < currentPeers) {
+            peersData.value.splice(targetPeers);
+          }
+          updateChart();
+        };
+
+        // 初始化雷達圖
+        const initChart = () => {
+          const ctx = document.getElementById('radarChart').getContext('2d');
+          chartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+              labels: dimensions.map(d => d.title),
+              datasets: []
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                r: {
+                  min: 0,
+                  max: 5,
+                  ticks: { stepSize: 1, backdropColor: 'transparent', font: { size: 10 } },
+                  pointLabels: { font: { size: 12, weight: 'bold' } }
+                }
+              },
+              plugins: { 
+                legend: { 
+                  position: 'bottom',
+                  labels: { boxWidth: 12, font: { size: 11 } }
+                } 
+              }
+            }
+          });
+          updateChart();
+        };
+
+        // 更新雷達圖資料
+        const updateChart = () => {
+          if (!chartInstance) return;
+          
+          const datasets = [];
+          
+          // 加入自評資料集
+          datasets.push({
+            label: (selfData.name || '自己') + ' (自評)',
+            data: [...selfData.scores],
+            backgroundColor: colors[0].bg,
+            borderColor: colors[0].border,
+            borderWidth: 2,
+            pointBackgroundColor: colors[0].border,
+            pointRadius: 4
+          });
+
+          // 加入互評資料集
+          peersData.value.forEach((peer, idx) => {
+            const colorIdx = (idx + 1) % colors.length;
+            datasets.push({
+              label: (peer.name || `隊友 ${idx+1}`) + ' (互評)',
+              data: [...peer.scores],
+              backgroundColor: colors[colorIdx].bg,
+              borderColor: colors[colorIdx].border,
+              borderWidth: 2,
+              pointBackgroundColor: colors[colorIdx].border,
+              pointRadius: 4
+            });
+          });
+
+          chartInstance.data.datasets = datasets;
+          chartInstance.update();
+        };
+
+        // 功能 1：下載 PNG 圖檔
+        const downloadPNG = () => {
+          if (!teamName.value || !selfData.name) {
+            showNotice('建議先填寫「小隊名稱」與「自己姓名」，讓匯出的圖檔名稱更完整！', '溫馨提示', 'warning');
+          }
+          const canvas = document.getElementById('radarChart');
+          const link = document.createElement('a');
+          const tName = teamName.value || '未命名小隊';
+          const sName = selfData.name || '無名氏';
+          link.download = `${tName}_${sName}_超能力雷達圖.png`;
+          
+          // 加上白色底色，避免 PNG 透明背景黑化
+          const newCanvas = document.createElement('canvas');
+          newCanvas.width = canvas.width;
+          newCanvas.height = canvas.height;
+          const ctx = newCanvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+          ctx.drawImage(canvas, 0, 0);
+          
+          link.href = newCanvas.toDataURL('image/png');
+          link.click();
+        };
+
+        // 功能 2：下載 Excel 報表
+        const downloadExcel = () => {
+          if (!teamName.value || !selfData.name) {
+            showNotice('請至少填寫「小隊名稱」與「自己姓名」再下載 Excel 報表！', '請填寫必要欄位', 'warning');
+            return;
+          }
+          const rows = [];
+          
+          // 表頭
+          rows.push(['小隊名稱', '評估者(自己)', '被評估者', '關係', '認真負責', '積極互助', '傾聽尊重', '清楚溝通', '團體反思', '關鍵事實證據/回饋']);
+          
+          // 自評紀錄
+          rows.push([
+            teamName.value, selfData.name, selfData.name, '自評',
+            ...selfData.scores, selfData.feedback
+          ]);
+          
+          // 互評紀錄
+          peersData.value.forEach(peer => {
+            if (peer.name.trim() !== '') {
+              rows.push([
+                teamName.value, selfData.name, peer.name, '互評',
+                ...peer.scores, peer.feedback
+              ]);
+            }
+          });
+
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet(rows);
+          XLSX.utils.book_append_sheet(wb, ws, "評估資料");
+          XLSX.writeFile(wb, `${teamName.value}_${selfData.name}_評估資料.xlsx`);
+        };
+
+        // 功能 3：同步至 Google Apps Script 雲端
+        const syncData = () => {
+          if (!teamName.value || !selfData.name) {
+            showNotice('請填寫「小隊名稱」與「您的姓名」再進行雲端同步！', '無法同步', 'warning');
+            return;
+          }
+          
+          if (typeof google === 'undefined' || !google.script) {
+            showNotice('目前為前端獨立預覽模式，未連接至 Google Apps Script 伺服器環境。\n\n部署至 GAS 後即可啟用自動備份雲端功能！', '預覽環境提示', 'info');
+            return;
+          }
+
+          isSyncing.value = true;
+          
+          // 取得圖表 Base64 編碼 (帶白底)
+          const canvas = document.getElementById('radarChart');
+          const newCanvas = document.createElement('canvas');
+          newCanvas.width = canvas.width;
+          newCanvas.height = canvas.height;
+          const ctx = newCanvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+          ctx.drawImage(canvas, 0, 0);
+          const imageBase64 = newCanvas.toDataURL('image/png');
+
+          const payload = {
+            teamName: teamName.value,
+            selfName: selfData.name,
+            selfData: { name: selfData.name, scores: selfData.scores, feedback: selfData.feedback },
+            peersData: peersData.value.map(p => ({ name: p.name, scores: p.scores, feedback: p.feedback }))
+          };
+
+          // 呼叫 GAS 後端 API
+          google.script.run
+            .withSuccessHandler(res => {
+              isSyncing.value = false;
+              if (res && res.error) {
+                showNotice(res.error, '同步失敗', 'error');
+              } else {
+                showNotice(res?.message || '資料已成功同步至雲端硬碟與 Google 試算表！', '同步成功', 'success');
+              }
+            })
+            .withFailureHandler(err => {
+              isSyncing.value = false;
+              showNotice('系統發生錯誤：' + err, '連線異常', 'error');
+            })
+            .submitEvaluation(payload, imageBase64);
+        };
+
+        // 輔助功能：快速載入測試範例資料
+        const fillDemoData = () => {
+          teamName.value = '創客超人隊';
+          memberCount.value = 3;
+          
+          selfData.name = '陳大明';
+          selfData.scores = [5, 4, 4, 5, 4];
+          selfData.feedback = '在專案進行期間，我主動規劃架構與分工，並提早一天交出程式碼草稿。';
+
+          peersData.value = [
+            { name: '林小華', scores: [4, 5, 5, 4, 3], feedback: '討論時非常耐心聽大家說話，並且給予許多正面與實用的回饋！' },
+            { name: '張阿強', scores: [3, 4, 4, 3, 5], feedback: '每次報告結束後都會主動提議檢討報告流暢度，是團隊進步的推手。' }
+          ];
+
+          updateChart();
+          showNotice('已成功載入範例資料！您可以點擊右側按鈕測試 PNG 及 Excel 匯出功能。', '範例資料已載入', 'success');
+        };
+
+        return {
+          initMessage, initError, isSyncing, modal,
+          teamName, memberCount, selfData, peersData, dimensions,
+          adjustPeers, updateChart, downloadPNG, downloadExcel, syncData, fillDemoData
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
