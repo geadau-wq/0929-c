@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>光譜定位 (Spectrum Sort) 學生探究紀錄單</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            line-height: 1.6;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1a5276;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 8px;
+        }
+        .info-box {
+            background-color: #ebf5fb;
+            padding: 15px;
+            border-left: 5px solid #3498db;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+        .spectrum-card {
+            border: 2px solid #aed6f1;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            background-color: #fafafa;
+        }
+        .spectrum-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #2e4053;
+            margin-bottom: 12px;
+        }
+        .spectrum-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(90deg, #d4efdf 0%, #f9e79f 50%, #f5b7b1 100%);
+            padding: 15px 10px;
+            border-radius: 30px;
+            margin: 15px 0;
+            position: relative;
+        }
+        .spectrum-node {
+            background: #ffffff;
+            border: 2px solid #2980b9;
+            padding: 8px 12px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .spectrum-node span {
+            display: block;
+            font-weight: bold;
+            color: #c0392b;
+        }
+        .reasoning {
+            background-color: #f9f9f9;
+            border: 1px dashed #bdc3c7;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+        .rule-summary {
+            background-color: #fef9e7;
+            border: 2px solid #f1c40f;
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧑‍🎓 概念為本探究學習單：大數的光譜定位 (Spectrum Sort)</h2>
+    
+    <div class="info-box">
+        <p><strong>探究班級：</strong>四年三班 第一小組</p>
+        <p><strong>探究主題：</strong>一億以內的數 — 數量比較</p>
+        <p><strong>核心概念：</strong>數量比較（位數多寡、高位數值、位值順序）</p>
+    </div>
+
+    <!-- 面向一排序 -->
+    <div class="spectrum-card">
+        <div class="spectrum-title">📌 面向一：按【人口規模】進行光譜排序</div>
+        
+        <div class="spectrum-line">
+            <small><b>［人口最少］</b></small>
+            <div class="spectrum-node">臺北市<br><span>2506788 人</span></div>
+            <div class="spectrum-node">新加坡<br><span>6024595 人</span></div>
+            <div class="spectrum-node">馬尼拉<br><span>14667089 人</span></div>
+            <div class="spectrum-node">澳洲<br><span>25120000 人</span></div>
+            <div class="spectrum-node">德國<br><span>83020005 人</span></div>
+            <div class="spectrum-node">越南<br><span>98000040 人</span></div>
+            <small><b>［人口最多］</b></small>
+        </div>
+
+        <div class="reasoning">
+            <strong>小組排序理由與思考歷程：</strong>
+            <p>1. 我們先觀察位數：臺北市（2506788）與新加坡（6024595）都是 <b>7 位數</b>（百萬級），其他國家都是 <b>8 位數</b>（千萬級），所以 7 位數的排在光譜左邊比較小。</p>
+            <p>2. 比較 7 位數時，先比最高位（百萬位）：臺北市是 2 百萬，新加坡是 6 百萬，因為 2506788 ＜ 6024595，所以臺北市最少，排在最左端。</p>
+            <p>3. 比較 8 位數時，先比千萬位：馬尼拉（1千萬）＜ 澳洲（2千萬）＜ 德國（8千萬）＜ 越南（9千萬），所以越南人口最多，排在最右端。</p>
+        </div>
+    </div>
+
+    <!-- 面向二排序 -->
+    <div class="spectrum-card">
+        <div class="spectrum-title">📌 面向二：按【位值順序（當高位相同時）】進行光譜排序</div>
+        <p><i>（探究事例：甲、乙、丙、丁四家公司營業額）</i></p>
+
+        <div class="spectrum-line">
+            <small><b>［營收最低］</b></small>
+            <div class="spectrum-node">甲公司<br><span>9900009 元</span></div>
+            <div class="spectrum-node">丙公司<br><span>10080090 元</span></div>
+            <div class="spectrum-node">丁公司<br><span>10089000 元</span></div>
+            <div class="spectrum-node">乙公司<br><span>10900005 元</span></div>
+            <small><b>［營收最高］</b></small>
+        </div>
+
+        <div class="reasoning">
+            <strong>小組排序理由與思考歷程：</strong>
+            <p>1. 甲公司是 7 位數（9900009），其餘三家都是 8 位數，所以甲公司最小。</p>
+            <p>2. 丙公司（10080090）、丁公司（10089000）與乙公司（10900005）千萬位都是 1（1千萬），百萬位都是 0。</p>
+            <p>3. 比對十萬位時，乙公司是 9（90萬），丙公司與丁公司是 0，所以乙公司最大。</p>
+            <p>4. 比較丙與丁時，前面的 1008萬都相同，再看一的家族：丙公司是 90，丁公司是 9000，因為 90 ＜ 9000，所以丙公司比丁公司少。</p>
+            <p><strong>數學關係式：</strong> 9900009 元 ＜ 10080090 元 ＜ 10089000 元 ＜ 10900005 元</p>
+        </div>
+    </div>
+
+    <!-- 通則總結 -->
+    <div class="rule-summary">
+        <h3>💡 我們的發現與大數比較通則</h3>
+        <ul>
+            <li><b>規則一（位數多寡）：</b> 比較大數時，先數位數。位數較多的數，其數值必定比較大（例如：8 位數 ＞ 7 位數）。</li>
+            <li><b>規則二（高位數值）：</b> 當位數相同時，由最高位（最左邊）開始比較。最高位數字較大者，整體數量較大。</li>
+            <li><b>規則三（位值順序）：</b> 若最高位數字相同，則由左向右依序比較下一個位值，直到比出大小為止。</li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>
